@@ -1,3 +1,5 @@
+import os
+
 DEXSCREENER_URL = "https://api.dexscreener.com/latest/dex/search?q=SOL"
 
 MIN_LIQUIDITY = 1000
@@ -10,9 +12,10 @@ INTERVAL = 300
 
 DB_NAME = "memecoins.db"
 
-import os
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8748976085:AAFKfuiyGO5XtTjN9Hd2HMsGyvA_wU1jD5I")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "@MemecoinSourcebot")
+TELEGRAM_BOT_TOKEN = os.getenv("8748976085:AAEWdOFj6IcKQRlkkr4q5ggpb_gON2r21Tw")
+
+
+TELEGRAM_CHAT_ID = os.getenv("memecoinSource")
 
 AI_PREDICT_PERIODS = 6 
-AI_PREDICT_FREQ = '5min' 
+AI_PREDICT_FREQ = '5min'

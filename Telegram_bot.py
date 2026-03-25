@@ -2,11 +2,12 @@ import requests
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from datetime import datetime
 
-BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-
 def send_signal(signal):
     try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+
         tier_label = "PREMIUM" if signal['score'] >= 2 else "FREE"
+
         message = (
             f"🚨 MEMECOIN SIGNAL ({tier_label}) 🚨\n\n"
             f"Symbol: {signal['symbol']}\n"
@@ -17,13 +18,15 @@ def send_signal(signal):
             f"Score: {signal['score']}\n"
             f"Time: {datetime.utcnow().strftime('%H:%M UTC')}"
         )
+
         payload = {
             "chat_id": TELEGRAM_CHAT_ID,
-            "text": message,
-            "parse_mode": "Markdown"
+            "text": message
         }
-        response = requests.post(BASE_URL, data=payload)
-        if response.status_code != 200:
-            print("Telegram send error:", response.text)
+
+        response = requests.post(url, data=payload)
+
+        print(" Telegram response:", response.text)
+
     except Exception as e:
-        print("Telegram exception:", e)
+        print(" Telegram exception:", e)
