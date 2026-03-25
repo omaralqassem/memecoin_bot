@@ -7,7 +7,6 @@ def connect_db():
 def create_table():
     conn = connect_db()
     cursor = conn.cursor()
-
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,14 +18,12 @@ def create_table():
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
-
     conn.commit()
     conn.close()
 
 def insert_token(token):
     conn = connect_db()
     cursor = conn.cursor()
-
     cursor.execute("""
     INSERT INTO tokens (symbol, name, price, volume, liquidity)
     VALUES (?, ?, ?, ?, ?)
@@ -37,14 +34,12 @@ def insert_token(token):
         token["volume"],
         token["liquidity"]
     ))
-
     conn.commit()
     conn.close()
 
 def get_last_entries(symbol, limit=2):
     conn = connect_db()
     cursor = conn.cursor()
-
     cursor.execute("""
     SELECT volume, price, timestamp
     FROM tokens
@@ -52,8 +47,6 @@ def get_last_entries(symbol, limit=2):
     ORDER BY timestamp DESC
     LIMIT ?
     """, (symbol, limit))
-
     rows = cursor.fetchall()
     conn.close()
-
     return rows

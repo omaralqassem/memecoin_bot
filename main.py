@@ -3,7 +3,7 @@ from db import create_table, insert_token
 from collector import get_valid_tokens
 from signals import generate_signal
 from config import INTERVAL
-from Telegram_bot import send_signal
+from telegram_bot import send_signal
 
 def main():
     print(" Starting memecoin signal engine + single Telegram bot")
