@@ -7,28 +7,31 @@ def send_signal(signal):
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
-        tier_label = "PREMIUM" if signal['score'] >= 2 else "FREE"
+        emoji = {
+            "BUY": "🟢",
+            "SELL": "🔴",
+            "HOLD": "⚖️"
+        }
 
         message = (
-            f"🚨 MEMECOIN SIGNAL ({tier_label}) 🚨\n\n"
+            f"{emoji[signal['action']]} *{signal['action']} SIGNAL*\n\n"
             f"Symbol: {signal['symbol']}\n"
-            f"Type: {signal['type']}\n"
             f"Price: {signal['price']}\n"
-            f"Liquidity: {signal['liquidity']}\n"
-            f"Change: {signal['change_percent']}%\n"
+            f"Liquidity: ${signal['liquidity']}\n"
+            f"Volume Change: {signal['volume_change']}%\n"
+            f"Price Trend: {signal['price_trend']}%\n"
             f"Score: {signal['score']}\n"
-            f"Time: {datetime.utcnow().strftime('%H:%M UTC')}"
+            f"Confidence: {signal['confidence']}%\n"
         )
 
         payload = {
             "chat_id": TELEGRAM_CHAT_ID,
-            "text": message
+            "text": message,
+            "parse_mode": "Markdown"
         }
 
         response = requests.post(url, data=payload)
-
-        st.write("Telegram STATUS:", response.status_code)
-        st.write("Telegram RESPONSE:", response.text)
+        print("Telegram:", response.text)
 
     except Exception as e:
-        st.error(f" Telegram exception: {e}")
+        print("Telegram error:", e)
