@@ -9,7 +9,7 @@ from config import DB_NAME, AI_PREDICT_PERIODS, AI_PREDICT_FREQ, INTERVAL
 from collector import get_valid_tokens
 from db import create_table, insert_token
 from signals import generate_signal
-from telegram_bot import send_signal
+from Telegram_bot import send_signal
 
 st.set_page_config(page_title="Memecoin AI Dashboard", layout="wide")
 st.title("🚀 Memecoin AI Dashboard + Bot")
