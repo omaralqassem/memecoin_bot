@@ -53,16 +53,22 @@ if st.button("Run Collector Now"):
     run_pipeline()
 
 if st.button("TEST TELEGRAM"):
-    send_signal({
+    test_signal = {
         "symbol": "TEST",
-        "type": "TEST",
+        "action": "BUY",
+        "confidence": 80,
         "price": 1,
         "liquidity": 10000,
-        "change_percent": 99,
-        "score": 3
-    })
-    st.success("Test message sent!")
+        "volume_change": 120,
+        "price_trend": 10,
+        "score": 5
+    }
 
+    st.write("Sending test signal:", test_signal)
+
+    send_signal(test_signal)
+
+    st.success("Test message sent!")
 st.write(f"Last collector run: {st.session_state.last_run}")
 
 conn = sqlite3.connect(DB_NAME)
