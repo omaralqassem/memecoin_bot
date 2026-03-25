@@ -29,4 +29,8 @@ def send_signal(signal):
         print(" Telegram response:", response.text)
 
     except Exception as e:
+<<<<<<< HEAD:Telegram_bot.py
         print(" Telegram exception:", e)
+=======
+        print("Telegram exception:", e)
+>>>>>>> c1956ab9a790cbd54d301040b828e0d2f73604d4:telegram_bot.py
