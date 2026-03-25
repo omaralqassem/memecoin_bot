@@ -1,6 +1,7 @@
 import requests
 from config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from datetime import datetime
+import streamlit as st
 
 def send_signal(signal):
     try:
@@ -26,11 +27,8 @@ def send_signal(signal):
 
         response = requests.post(url, data=payload)
 
-        print(" Telegram response:", response.text)
+        st.write("Telegram STATUS:", response.status_code)
+        st.write("Telegram RESPONSE:", response.text)
 
     except Exception as e:
-<<<<<<< HEAD:Telegram_bot.py
-        print(" Telegram exception:", e)
-=======
-        print("Telegram exception:", e)
->>>>>>> c1956ab9a790cbd54d301040b828e0d2f73604d4:telegram_bot.py
+        st.error(f" Telegram exception: {e}")
