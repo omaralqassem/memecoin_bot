@@ -4,12 +4,17 @@ import sqlite3
 import plotly.express as px
 from datetime import datetime
 from prophet import Prophet
-import time
-from config import DB_NAME, AI_PREDICT_PERIODS, AI_PREDICT_FREQ, INTERVAL
+from config import (
+    DB_NAME, AI_PREDICT_PERIODS, AI_PREDICT_FREQ, INTERVAL
+)
 from collector import get_valid_tokens
 from db import create_table, insert_token
 from signals import generate_signal
 from Telegram_bot import send_signal
+
+from streamlit_autorefresh import st_autorefresh
+
+st_autorefresh(interval=INTERVAL*1000, key="collector_refresh")
 
 st.set_page_config(page_title="Memecoin AI Dashboard", layout="wide")
 st.title("🚀 Memecoin AI Dashboard + Bot")
@@ -27,11 +32,14 @@ def run_pipeline():
         insert_token(token)
         signal = generate_signal(token)
         if signal and signal['symbol'] not in st.session_state.seen_tokens:
-            send_signal(signal)
+            send_signal(signal)  
             st.session_state.seen_tokens.add(signal['symbol'])
     st.session_state.last_run = datetime.utcnow()
 
-if st.button("Run Collector Now") or st.session_state.last_run is None:
+if st.session_state.last_run is None:
+    run_pipeline()
+
+if st.button("Run Collector Now"):
     run_pipeline()
 
 st.write(f"Last collector run: {st.session_state.last_run}")
@@ -47,19 +55,19 @@ st.dataframe(df.tail(50))
 top_tokens = df['symbol'].value_counts().head(5).index.tolist()
 st.subheader("Price Trend of Top Tokens")
 for token in top_tokens:
-    token_df = df[df['symbol']==token]
+    token_df = df[df['symbol'] == token]
     fig = px.line(token_df, x='timestamp', y='price', title=f'{token} Price Trend')
     st.plotly_chart(fig, use_container_width=True)
 
 st.subheader("Volume Spike Alerts")
 df['prev_volume'] = df.groupby('symbol')['volume'].shift(1)
 df['volume_change'] = (df['volume'] - df['prev_volume']) / df['prev_volume']
-volume_spikes = df[df['volume_change']>0.5].tail(20)
+volume_spikes = df[df['volume_change'] > 0.5].tail(20)
 st.dataframe(volume_spikes[['symbol','price','liquidity','volume','volume_change','timestamp']])
 
 st.subheader("AI-Based Volume Prediction")
 for token in top_tokens:
-    token_df = df[df['symbol']==token][['timestamp','volume']].rename(columns={'timestamp':'ds','volume':'y'})
+    token_df = df[df['symbol'] == token][['timestamp','volume']].rename(columns={'timestamp':'ds','volume':'y'})
     if len(token_df) < 5:
         continue
     model = Prophet(daily_seasonality=False, weekly_seasonality=False, yearly_seasonality=False)
