@@ -12,10 +12,11 @@ INTERVAL = 300
 
 DB_NAME = "memecoins.db"
 
-TELEGRAM_BOT_TOKEN = os.getenv("8748976085:AAEWdOFj6IcKQRlkkr4q5ggpb_gON2r21Tw")
-
-
+TELEGRAM_BOT_TOKEN = os.getenv("8748976085:AAFVzWuYdaVk9hwUJhsPZhMRE3ZlU0zBoDw")
 TELEGRAM_CHAT_ID = os.getenv("memecoinSource")
+
+if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+    raise ValueError(" Telegram config missing! Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID")
 
 AI_PREDICT_PERIODS = 6 
 AI_PREDICT_FREQ = '5min'
