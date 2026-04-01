@@ -59,6 +59,7 @@ if st.button("TEST TELEGRAM"):
         "confidence": 80,
         "price": 1,
         "liquidity": 10000,
+<<<<<<< HEAD
         "volume_change": 120,
         "price_trend": 10,
         "score": 5
@@ -69,6 +70,13 @@ if st.button("TEST TELEGRAM"):
     send_signal(test_signal)
 
     st.success("Test message sent!")
+=======
+        "change_percent": 99,
+        "score": 3
+    })
+    st.success("Test message sent!")
+
+>>>>>>> fcdf022 (Changes FOR Life)
 st.write(f"Last collector run: {st.session_state.last_run}")
 
 conn = sqlite3.connect(DB_NAME)
@@ -146,4 +154,8 @@ for token in top_tokens:
         st.plotly_chart(fig, use_container_width=True)
 
     except Exception as e:
+<<<<<<< HEAD
         st.warning(f"Prediction failed for {token}: {e}")
+=======
+        st.warning(f"Prediction failed for {token}: {e}")
+>>>>>>> fcdf022 (Changes FOR Life)
