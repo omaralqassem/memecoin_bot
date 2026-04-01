@@ -60,6 +60,15 @@ if st.button("TEST TELEGRAM"):
         "price": 1,
         "liquidity": 10000,
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+        "change_percent": 99,
+        "score": 3
+    })
+    st.success("Test message sent!")
+
+=======
+>>>>>>> 4cf706e41540da2bbb1bc4aa2dbb77e4ebb9501a
         "volume_change": 120,
         "price_trend": 10,
         "score": 5
@@ -70,6 +79,7 @@ if st.button("TEST TELEGRAM"):
     send_signal(test_signal)
 
     st.success("Test message sent!")
+<<<<<<< HEAD
 =======
         "change_percent": 99,
         "score": 3
@@ -77,6 +87,9 @@ if st.button("TEST TELEGRAM"):
     st.success("Test message sent!")
 
 >>>>>>> fcdf022 (Changes FOR Life)
+=======
+>>>>>>> 372497d89908ac7b995ff621f5e21946b3098eff
+>>>>>>> 4cf706e41540da2bbb1bc4aa2dbb77e4ebb9501a
 st.write(f"Last collector run: {st.session_state.last_run}")
 
 conn = sqlite3.connect(DB_NAME)
@@ -158,4 +171,8 @@ for token in top_tokens:
         st.warning(f"Prediction failed for {token}: {e}")
 =======
         st.warning(f"Prediction failed for {token}: {e}")
+<<<<<<< HEAD
 >>>>>>> fcdf022 (Changes FOR Life)
+=======
+>>>>>>> 372497d89908ac7b995ff621f5e21946b3098eff
+>>>>>>> 4cf706e41540da2bbb1bc4aa2dbb77e4ebb9501a

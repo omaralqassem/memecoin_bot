@@ -2,7 +2,7 @@
 import time
 import sqlite3
 from signals import generate_signal
-from config import INTERVAL, MIN_LIQUIDITY_SIGNAL, RISK_PER_TRADE, DB_NAME
+from config import INTERVAL, MIN_LIQUIDITY, RISK_PER_TRADE, DB_NAME
 from telegram_bot import send_signal
 from collector import get_valid_tokens
 
@@ -139,7 +139,36 @@ def execute_trade(token, open_trades):
     if not DRY_RUN:
         send_signal(trade)
         log_trade(trade)
+import sqlite3
+from config import DB_NAME
 
+conn = sqlite3.connect(DB_NAME)
+conn.execute("""
+CREATE TABLE IF NOT EXISTS tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT,
+    name TEXT,
+    price REAL,
+    volume REAL,
+    liquidity REAL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.execute("""
+CREATE TABLE IF NOT EXISTS trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol TEXT,
+    action TEXT,
+    entry_price REAL,
+    stop_loss REAL,
+    take_profit REAL,
+    position_size REAL,
+    status TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+""")
+conn.commit()
+conn.close()
 
 def main():
     open_trades = []

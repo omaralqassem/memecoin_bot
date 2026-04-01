@@ -1,7 +1,7 @@
-#config.py
-import streamlit as st
+import os
 
 DEXSCREENER_URL = "https://api.dexscreener.com/latest/dex/search?q=SOL"
+
 MIN_LIQUIDITY = 20000     
 MIN_VOLUME_24H = 10000       
 MAX_VOLUME_LIQUIDITY_RATIO = 5 
@@ -9,11 +9,11 @@ MAX_PRICE_SPIKE = 1.5
 MIN_PAIR_AGE_SECONDS = 300 
 
 INTERVAL = 300  
+
 DB_NAME = "memecoins.db"
 
-TELEGRAM_BOT_TOKEN = "8748976085:AAFVzWuYdaVk9hwUJhsPZhMRE3ZlU0zBoDw"
-TELEGRAM_CHAT_ID = "-1003747525171"
-
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 INITIAL_BALANCE = 1000
 RISK_PER_TRADE = 0.01
