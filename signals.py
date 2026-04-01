@@ -1,40 +1,74 @@
-from db import get_last_entries
-from config import VOLUME_SPIKE_THRESHOLD, MIN_LIQUIDITY_SIGNAL
+#signals.py
+import pandas as pd
+from risk import calculate_levels
 
-def detect_volume_spike(token):
+def compute_indicators(history):
+    if len(history) < 10:
+        return None
+
+    df = pd.DataFrame(history, columns=["volume", "price", "timestamp"])
+    df = df[::-1] 
+
+    # EMA (trend)
+    df["ema"] = df["price"].ewm(span=5).mean()
+
+    # RSI
+    delta = df["price"].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(5).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(5).mean()
+
+    rs = gain / loss
+    df["rsi"] = 100 - (100 / (1 + rs))
+
+    return df
+
+
+def generate_signal(token, history=None):
+ 
     symbol = token["symbol"]
-    history = get_last_entries(symbol, limit=2)
 
-    if len(history) < 2:
+    if history is None:
+        from db import get_last_entries
+        history = get_last_entries(symbol, limit=15)
+
+    if len(history) < 10:
         return None
 
-    latest_volume = history[0][0]
-    previous_volume = history[1][0]
-
-    if previous_volume == 0:
+    df = compute_indicators(history)
+    if df is None:
         return None
 
-    change = (latest_volume - previous_volume) / previous_volume
+    latest = df.iloc[-1]
+    prev = df.iloc[-2]
 
-    if change > 0.3:  
-        score = 1
+    price = latest["price"]
+    ema = latest["ema"]
+    rsi = latest["rsi"]
 
-        if change > 1.0:
-            score += 2
+    volume_now = latest["volume"]
+    volume_prev = prev["volume"]
 
-        if token["liquidity"] > 20000:
-            score += 1
+    liquidity = token["liquidity"]
 
-        return {
-            "symbol": symbol,
-            "type": "VOLUME_SPIKE",
-            "change_percent": round(change * 100, 2),
-            "price": token["price"],
-            "liquidity": token["liquidity"],
-            "score": score
-        }
+    trend_up = price > ema
+    healthy_rsi = 50 < rsi < 70
+    volume_increasing = volume_now > volume_prev
+    price_jump = (price - prev["price"]) / prev["price"]
+    not_pumped = price_jump < 0.15  
 
-    return None
+    if not (trend_up and healthy_rsi and volume_increasing and not_pumped):
+        return None
 
-def generate_signal(token):
-    return detect_volume_spike(token)
+    stop_loss, take_profit = calculate_levels(price)
+
+    return {
+        "symbol": symbol,
+        "action": "BUY",
+        "price": price,
+        "liquidity": liquidity,
+        "rsi": round(rsi, 2),
+        "ema": round(ema, 6),
+        "volume": volume_now,
+        "stop_loss": stop_loss,
+        "take_profit": take_profit
+    }
