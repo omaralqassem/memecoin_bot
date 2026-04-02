@@ -21,6 +21,24 @@ def fetch_pairs():
         return []
 
 
+def fetch_price(pair_address):
+    try:
+        url = f"https://api.dexscreener.com/latest/dex/pairs/solana/{pair_address}"
+        response = requests.get(url, headers=HEADERS, timeout=5)
+        response.raise_for_status()
+
+        data = response.json()
+        pairs = data.get("pairs", [])
+
+        if not pairs:
+            return None
+
+        return float(pairs[0]["priceUsd"])
+    except Exception as e:
+        print("Price fetch error:", e)
+        return None
+
+
 def extract_token(pair):
     try:
         return {

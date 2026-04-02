@@ -1,9 +1,10 @@
 import time
-from collector import get_valid_tokens
+from collector import get_valid_tokens, fetch_price  # ✅ UPDATED
 from signals import generate_signal
 from db import insert_token, create_table
 from config import INTERVAL
-
+from config import FEE, SLIPPAGE
+from collector import fetch_price
 balance = 1000
 open_trades = []
 
@@ -13,8 +14,10 @@ MAX_DAILY_LOSS = 0.03
 daily_loss = 0
 
 
+from risk import calculate_position_size
+
 def execute(token):
-    global open_trades
+    global open_trades, balance
 
     if len(open_trades) >= MAX_TRADES:
         return
@@ -24,11 +27,21 @@ def execute(token):
     if not signal:
         return
 
+    entry = signal["price"]
+    stop_loss = signal["stop_loss"]
+
+    position_size = calculate_position_size(balance, entry, stop_loss)
+
+    if position_size <= 0:
+        return
+
+    signal["size"] = position_size
+
     open_trades.append(signal)
 
     print(
-        f"🐋 SNIPED: {signal['symbol']} | total={signal['score']} "
-        f"(S:{signal['sniper_score']} W:{signal['whale_score']})"
+        f"🐋 SNIPED: {signal['symbol']} | size={position_size:.2f} | "
+        f"entry={entry} | SL={stop_loss}"
     )
 
 
@@ -36,32 +49,46 @@ def monitor_trades():
     global balance, daily_loss
 
     for trade in open_trades[:]:
-        current_price = trade["price"]
-
         entry = trade["price"]
+        size = trade["size"]
 
-        if current_price > entry * 1.3:
+        current_price = fetch_price(trade["pair_address"])
+
+        if not current_price:
+            continue
+
+        effective_price = current_price * (1 - SLIPPAGE)
+
+        print(f"{trade['symbol']} | entry={entry} | current={effective_price}")
+
+        if effective_price > entry * 1.3:
             trade["stop_loss"] = entry * 1.1
 
-        if current_price > entry * 1.6:
+        if effective_price > entry * 1.6:
             trade["stop_loss"] = entry * 1.3
 
-        if current_price <= trade["stop_loss"]:
-            loss = abs(entry - trade["stop_loss"])
-            balance -= loss
-            daily_loss += loss / 1000
+        if effective_price <= trade["stop_loss"]:
+            pnl = (trade["stop_loss"] - entry) * size
+
+            pnl -= abs(entry * size) * FEE
+
+            balance += pnl
+            daily_loss += abs(pnl) / balance
+
             open_trades.remove(trade)
 
-            print(f"❌ STOP LOSS: {trade['symbol']}")
+            print(f"❌ STOP LOSS: {trade['symbol']} | PnL={pnl:.2f}")
 
-        elif current_price >= trade["take_profit"]:
-            profit = abs(trade["take_profit"] - entry)
-            balance += profit
+        elif effective_price >= trade["take_profit"]:
+            pnl = (trade["take_profit"] - entry) * size
+
+            pnl -= abs(entry * size) * FEE
+
+            balance += pnl
+
             open_trades.remove(trade)
 
-            print(f"✅ TAKE PROFIT: {trade['symbol']}")
-
-
+            print(f"✅ TAKE PROFIT: {trade['symbol']} | PnL={pnl:.2f}")
 def main():
     global daily_loss
 

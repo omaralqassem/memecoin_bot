@@ -11,7 +11,6 @@ def generate_signal(token):
     if len(history) < 3:
         return None
 
-    # Core intelligence
     sniper_score = calculate_sniper_score(token, history)
     whale_score = detect_whale_activity(token, history)
 
@@ -21,18 +20,17 @@ def generate_signal(token):
         f"{symbol} | sniper={sniper_score} | whale={whale_score} | total={total_score}"
     )
 
-    # Strong filter (only high conviction trades)
     if total_score < 10:
         return None
 
     entry = token["price"]
 
-    # Better risk for whale trades
     stop_loss = entry * 0.9
     take_profit = entry * 1.7
 
     return {
         "symbol": symbol,
+        "pair_address": token["address"],  # ✅ NEW
         "action": "BUY",
         "price": entry,
         "liquidity": token["liquidity"],
