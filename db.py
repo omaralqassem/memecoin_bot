@@ -1,4 +1,4 @@
-#db.py
+# db.py
 import sqlite3
 from config import DB_NAME
 
@@ -8,14 +8,30 @@ def connect_db():
 def create_table():
     conn = connect_db()
     cursor = conn.cursor()
+    # Token table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        address TEXT,
         symbol TEXT,
         name TEXT,
         price REAL,
         volume REAL,
         liquidity REAL,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    # Trades table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS trades (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT,
+        action TEXT,
+        price REAL,
+        stop_loss REAL,
+        take_profit REAL,
+        pnl REAL,
+        status TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -26,15 +42,9 @@ def insert_token(token):
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("""
-    INSERT INTO tokens (symbol, name, price, volume, liquidity)
-    VALUES (?, ?, ?, ?, ?)
-    """, (
-        token["symbol"],
-        token["name"],
-        token["price"],
-        token["volume"],
-        token["liquidity"]
-    ))
+    INSERT INTO tokens (address, symbol, name, price, volume, liquidity)
+    VALUES (?, ?, ?, ?, ?, ?)
+    """, (token["address"], token["symbol"], token["name"], token["price"], token["volume"], token["liquidity"]))
     conn.commit()
     conn.close()
 

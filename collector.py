@@ -1,54 +1,69 @@
-# collector.py 
 import requests
-import time
 from config import DEXSCREENER_URL
 from filters import is_valid
-from db import insert_token, connect_db
+from db import connect_db
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
-def fetch_pairs(retries=3):
-    for attempt in range(retries):
-        try:
-            response = requests.get(DEXSCREENER_URL, headers=HEADERS, timeout=30)
-            response.raise_for_status()
-            data = response.json()
-            pairs = data.get("pairs", [])
-            return pairs
-        except Exception as e:
-            print("Error fetching data:", e)
-            if attempt < retries - 1:
-                time.sleep(2)
-            else:
-                return []
+
+def fetch_pairs():
+    try:
+        response = requests.get(DEXSCREENER_URL, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        pairs = data.get("pairs", [])
+        print(f"TOTAL PAIRS: {len(pairs)}")
+
+        return pairs
+    except Exception as e:
+        print("Fetch error:", e)
+        return []
+
 
 def extract_token(pair):
     try:
         return {
+            "address": pair.get("pairAddress"),
             "symbol": pair["baseToken"]["symbol"],
             "name": pair["baseToken"]["name"],
             "price": float(pair["priceUsd"]),
             "volume": float(pair["volume"]["h24"]),
             "liquidity": float(pair["liquidity"]["usd"]),
         }
-    except Exception:
+    except Exception as e:
+        print("Extract error:", e)
         return None
+
 
 def get_valid_tokens():
     pairs = fetch_pairs()
-    valid_tokens = []
+    tokens = []
+
     conn = connect_db()
     cursor = conn.cursor()
 
     for pair in pairs:
-        if is_valid(pair):
-            token = extract_token(pair)
-            if token:
-                cursor.execute("SELECT 1 FROM tokens WHERE symbol=? ORDER BY timestamp DESC LIMIT 1", (token["symbol"],))
-                if cursor.fetchone():
-                    continue
-                valid_tokens.append(token)
-                insert_token(token)
+        if not is_valid(pair):
+            continue
+
+        token = extract_token(pair)
+        if not token:
+            continue
+
+        # Avoid duplicates
+        cursor.execute(
+            "SELECT 1 FROM tokens WHERE address=?",
+            (token["address"],)
+        )
+
+        if cursor.fetchone():
+            continue
+
+        print(f"VALID TOKEN: {token['symbol']} | LQ={token['liquidity']}")
+
+        tokens.append(token)
 
     conn.close()
-    return valid_tokens
+    print(f"TOTAL VALID TOKENS: {len(tokens)}")
+    return tokens

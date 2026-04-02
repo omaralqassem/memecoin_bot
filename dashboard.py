@@ -1,18 +1,25 @@
+# dashboard.py
 import streamlit as st
 import pandas as pd
 import sqlite3
 import plotly.express as px
 from datetime import datetime
-from prophet import Prophet
 
-from config import (
-    DB_NAME, AI_PREDICT_PERIODS, AI_PREDICT_FREQ, INTERVAL
-)
+try:
+    from prophet import Prophet
+    PROPHET_AVAILABLE = True
+except:
+    PROPHET_AVAILABLE = False
+
+from config import DB_NAME, INTERVAL
 from collector import get_valid_tokens
 from db import create_table, insert_token
 from signals import generate_signal
 from telegram_bot import send_signal
 from streamlit_autorefresh import st_autorefresh
+
+AI_PREDICT_PERIODS = 10
+AI_PREDICT_FREQ = "min"
 
 st_autorefresh(interval=INTERVAL * 1000, key="collector_refresh")
 
@@ -23,7 +30,6 @@ create_table()
 
 if 'last_run' not in st.session_state:
     st.session_state.last_run = None
-
 if 'seen_tokens' not in st.session_state:
     st.session_state.seen_tokens = set()
 
@@ -31,70 +37,47 @@ def run_pipeline():
     tokens = get_valid_tokens()
     st.write(f"Fetched {len(tokens)} tokens")
 
+    if len(tokens) == 0:
+        st.warning("⚠️ No tokens passed filters")
+
     for token in tokens:
         insert_token(token)
-
         signal = generate_signal(token)
-
         if signal and signal['symbol'] not in st.session_state.seen_tokens:
-            st.success(f"🚨 SIGNAL DETECTED: {signal}")
-
+            st.success(f"🚨 SIGNAL DETECTED: {signal['symbol']} | Price: {signal['price']}")
             send_signal(signal)
-
             st.session_state.seen_tokens.add(signal['symbol'])
 
     st.session_state.last_run = datetime.utcnow()
 
-
 if st.session_state.last_run is None:
     run_pipeline()
 
-if st.button("Run Collector Now"):
-    run_pipeline()
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Run Collector Now"):
+        run_pipeline()
+with col2:
+    if st.button("TEST TELEGRAM"):
+        send_signal({
+            "symbol": "TEST",
+            "action": "BUY",
+            "price": 1,
+            "liquidity": 10000,
+            "stop_loss": 0.9,
+            "take_profit": 1.2
+        })
+        st.success("Test message sent!")
 
-if st.button("TEST TELEGRAM"):
-    test_signal = {
-        "symbol": "TEST",
-        "action": "BUY",
-        "confidence": 80,
-        "price": 1,
-        "liquidity": 10000,
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-        "change_percent": 99,
-        "score": 3
-    })
-    st.success("Test message sent!")
-
-=======
->>>>>>> 4cf706e41540da2bbb1bc4aa2dbb77e4ebb9501a
-        "volume_change": 120,
-        "price_trend": 10,
-        "score": 5
-    }
-
-    st.write("Sending test signal:", test_signal)
-
-    send_signal(test_signal)
-
-    st.success("Test message sent!")
-<<<<<<< HEAD
-=======
-        "change_percent": 99,
-        "score": 3
-    })
-    st.success("Test message sent!")
-
->>>>>>> fcdf022 (Changes FOR Life)
-=======
->>>>>>> 372497d89908ac7b995ff621f5e21946b3098eff
->>>>>>> 4cf706e41540da2bbb1bc4aa2dbb77e4ebb9501a
 st.write(f"Last collector run: {st.session_state.last_run}")
 
 conn = sqlite3.connect(DB_NAME)
 df = pd.read_sql_query("SELECT * FROM tokens ORDER BY timestamp DESC", conn)
 conn.close()
+
+if df.empty:
+    st.warning("No data yet. Run collector first.")
+    st.stop()
 
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 
@@ -106,73 +89,29 @@ top_tokens = df['symbol'].value_counts().head(5).index.tolist()
 st.subheader("📈 Price Trend of Top Tokens")
 for token in top_tokens:
     token_df = df[df['symbol'] == token]
-
-    fig = px.line(
-        token_df,
-        x='timestamp',
-        y='price',
-        title=f'{token} Price Trend'
-    )
+    fig = px.line(token_df, x='timestamp', y='price', title=f'{token} Price Trend')
     st.plotly_chart(fig, use_container_width=True)
 
-st.subheader(" Volume Spike Alerts")
-
+st.subheader("📊 Volume Spike Alerts")
 df['prev_volume'] = df.groupby('symbol')['volume'].shift(1)
 df['volume_change'] = (df['volume'] - df['prev_volume']) / df['prev_volume']
-
 volume_spikes = df[df['volume_change'] > 0.5].tail(20)
+st.dataframe(volume_spikes[['symbol', 'price', 'liquidity', 'volume', 'volume_change', 'timestamp']])
 
-st.dataframe(
-    volume_spikes[
-        ['symbol', 'price', 'liquidity', 'volume', 'volume_change', 'timestamp']
-    ]
-)
-
-st.subheader("🤖 AI-Based Volume Prediction")
-
-for token in top_tokens:
-    token_df = df[df['symbol'] == token][['timestamp', 'volume']]
-
-    token_df = token_df.rename(columns={
-        'timestamp': 'ds',
-        'volume': 'y'
-    })
-
-    if len(token_df) < 5:
-        continue
-
-    try:
-        model = Prophet(
-            daily_seasonality=False,
-            weekly_seasonality=False,
-            yearly_seasonality=False
-        )
-
-        model.fit(token_df)
-
-        future = model.make_future_dataframe(
-            periods=AI_PREDICT_PERIODS,
-            freq=AI_PREDICT_FREQ
-        )
-
-        forecast = model.predict(future)
-
-        fig = px.line(
-            forecast,
-            x='ds',
-            y='yhat',
-            title=f'{token} Volume Prediction'
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-    except Exception as e:
-<<<<<<< HEAD
-        st.warning(f"Prediction failed for {token}: {e}")
-=======
-        st.warning(f"Prediction failed for {token}: {e}")
-<<<<<<< HEAD
->>>>>>> fcdf022 (Changes FOR Life)
-=======
->>>>>>> 372497d89908ac7b995ff621f5e21946b3098eff
->>>>>>> 4cf706e41540da2bbb1bc4aa2dbb77e4ebb9501a
+if PROPHET_AVAILABLE:
+    st.subheader("🤖 AI-Based Volume Prediction")
+    for token in top_tokens:
+        token_df = df[df['symbol'] == token][['timestamp', 'volume']].rename(columns={'timestamp': 'ds', 'volume': 'y'})
+        if len(token_df) < 5:
+            continue
+        try:
+            model = Prophet(daily_seasonality=False, weekly_seasonality=False, yearly_seasonality=False)
+            model.fit(token_df)
+            future = model.make_future_dataframe(periods=AI_PREDICT_PERIODS, freq=AI_PREDICT_FREQ)
+            forecast = model.predict(future)
+            fig = px.line(forecast, x='ds', y='yhat', title=f'{token} Volume Prediction')
+            st.plotly_chart(fig, use_container_width=True)
+        except Exception as e:
+            st.warning(f"Prediction failed for {token}: {e}")
+else:
+    st.info("Prophet not installed — AI prediction disabled.")
