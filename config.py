@@ -2,7 +2,7 @@ import streamlit as st
 
 # config.py
 
-DEXSCREENER_URL = "https://api.dexscreener.com/latest/dex/tokens/solana"
+DEXSCREENER_URL = "https://api.dexscreener.com/latest/dex/search?q=solana"
 
 
 MIN_LIQUIDITY = 8000

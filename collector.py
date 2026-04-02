@@ -13,9 +13,11 @@ def fetch_pairs():
         data = response.json()
 
         pairs = data.get("pairs", [])
+
         print(f"TOTAL PAIRS: {len(pairs)}")
 
         return pairs
+
     except Exception as e:
         print("Fetch error:", e)
         return []
