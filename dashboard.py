@@ -20,7 +20,7 @@ from streamlit_autorefresh import st_autorefresh
 
 AI_PREDICT_PERIODS = 10
 AI_PREDICT_FREQ = "min"
-
+create_table()
 st_autorefresh(interval=INTERVAL * 1000, key="collector_refresh")
 
 st.set_page_config(page_title="Memecoin AI Dashboard", layout="wide")

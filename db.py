@@ -52,8 +52,8 @@ def insert_token(token):
     cursor = conn.cursor()
     try:
         cursor.execute("""
-        INSERT OR IGNORE INTO tokens (address, symbol, name, price, volume, liquidity)
-        VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO tokens (address, symbol, name, price, volume, liquidity)
+            VALUES (?, ?, ?, ?, ?, ?)
         """, (
             token["address"],
             token["symbol"],
@@ -67,7 +67,6 @@ def insert_token(token):
         print("DB insert error:", e)
     finally:
         conn.close()
-
 
 def get_last_entries(symbol, limit=10):
     conn = connect_db()

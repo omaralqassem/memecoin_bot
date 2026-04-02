@@ -70,12 +70,20 @@ def get_valid_tokens():
             continue
 
         token = extract_token(pair)
-        if not token or not token.get("address"):
+        if not token:
+            continue
+
+        # Skip if address is missing
+        if not token.get("address"):
             continue
 
         # Skip if already in DB
-        cursor.execute("SELECT 1 FROM tokens WHERE address=?", (token["address"],))
-        if cursor.fetchone():
+        try:
+            cursor.execute("SELECT 1 FROM tokens WHERE address=?", (token["address"],))
+            if cursor.fetchone():
+                continue
+        except Exception as e:
+            print("DB select error:", e)
             continue
 
         tokens.append(token)
