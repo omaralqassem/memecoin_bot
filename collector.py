@@ -1,15 +1,15 @@
+# collector.py
 import requests
 from config import DEXSCREENER_URL, BIRDEYE_API
 from filters import is_valid
-from db import connect_db
+from db import connect_db, insert_token
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
-
 def fetch_dexscreener_pairs():
     pairs = []
-    queries = ["sol", "dog", "inu", "pepe", "cat", "ai"] 
+    queries = ["sol", "dog", "inu", "pepe", "cat", "ai"]  # extend as needed
 
     for q in queries:
         try:
@@ -25,7 +25,6 @@ def fetch_dexscreener_pairs():
 
     print(f"TOTAL PAIRS FETCHED FROM DEXSCREENER: {len(pairs)}")
     return pairs
-
 
 
 def fetch_birdeye_tokens():
@@ -71,14 +70,14 @@ def get_valid_tokens():
             continue
 
         token = extract_token(pair)
-        if not token:
+        if not token or not token.get("address"):
             continue
 
+        # Skip if already in DB
         cursor.execute("SELECT 1 FROM tokens WHERE address=?", (token["address"],))
         if cursor.fetchone():
             continue
 
-        print(f"VALID TOKEN: {token['symbol']} | LQ={token['liquidity']}")
         tokens.append(token)
 
     conn.close()
