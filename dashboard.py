@@ -1,4 +1,3 @@
-# dashboard.py
 import streamlit as st
 import pandas as pd
 import sqlite3
@@ -8,7 +7,7 @@ from datetime import datetime
 try:
     from prophet import Prophet
     PROPHET_AVAILABLE = True
-except:
+except ImportError:
     PROPHET_AVAILABLE = False
 
 from config import DB_NAME, INTERVAL
@@ -26,8 +25,10 @@ st_autorefresh(interval=INTERVAL * 1000, key="collector_refresh")
 st.set_page_config(page_title="Memecoin AI Dashboard", layout="wide")
 st.title("🚀 Memecoin AI Dashboard + Telegram Bot")
 
+# Ensure DB tables exist
 create_table()
 
+# Session state to track last run & already seen signals
 if 'last_run' not in st.session_state:
     st.session_state.last_run = None
 if 'seen_tokens' not in st.session_state:
@@ -37,8 +38,9 @@ def run_pipeline():
     tokens = get_valid_tokens()
     st.write(f"Fetched {len(tokens)} tokens")
 
-    if len(tokens) == 0:
+    if not tokens:
         st.warning("⚠️ No tokens passed filters")
+        return
 
     for token in tokens:
         insert_token(token)
@@ -81,6 +83,7 @@ if df.empty:
 
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 
+
 st.subheader("📋 Latest Tokens")
 st.dataframe(df.tail(50))
 
@@ -92,11 +95,13 @@ for token in top_tokens:
     fig = px.line(token_df, x='timestamp', y='price', title=f'{token} Price Trend')
     st.plotly_chart(fig, use_container_width=True)
 
+
 st.subheader("📊 Volume Spike Alerts")
 df['prev_volume'] = df.groupby('symbol')['volume'].shift(1)
 df['volume_change'] = (df['volume'] - df['prev_volume']) / df['prev_volume']
 volume_spikes = df[df['volume_change'] > 0.5].tail(20)
 st.dataframe(volume_spikes[['symbol', 'price', 'liquidity', 'volume', 'volume_change', 'timestamp']])
+
 
 if PROPHET_AVAILABLE:
     st.subheader("🤖 AI-Based Volume Prediction")

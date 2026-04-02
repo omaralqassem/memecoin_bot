@@ -1,55 +1,55 @@
 import requests
-from config import DEXSCREENER_URL
+from config import DEXSCREENER_URL, BIRDEYE_API
 from filters import is_valid
 from db import connect_db
 
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 
 
-def fetch_pairs():
+
+def fetch_dexscreener_pairs():
+    pairs = []
+    queries = ["sol", "dog", "inu", "pepe", "cat", "ai"] 
+
+    for q in queries:
+        try:
+            url = f"{DEXSCREENER_URL}{q}"
+            response = requests.get(url, headers=HEADERS, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            fetched_pairs = data.get("pairs") or []
+            print(f"Query '{q}' returned {len(fetched_pairs)} pairs")
+            pairs.extend(fetched_pairs)
+        except Exception as e:
+            print(f"Dexscreener fetch error for '{q}':", e)
+
+    print(f"TOTAL PAIRS FETCHED FROM DEXSCREENER: {len(pairs)}")
+    return pairs
+
+
+
+def fetch_birdeye_tokens():
     try:
-        response = requests.get(DEXSCREENER_URL, headers=HEADERS, timeout=10)
+        response = requests.get(BIRDEYE_API, headers=HEADERS, timeout=10)
         response.raise_for_status()
         data = response.json()
-
-        pairs = data.get("pairs", [])
-
-        print(f"TOTAL PAIRS: {len(pairs)}")
-
-        return pairs
-
+        tokens = data.get("tokens") or []
+        print(f"Birdeye returned {len(tokens)} tokens")
+        return tokens
     except Exception as e:
-        print("Fetch error:", e)
+        print("Birdeye fetch error:", e)
         return []
-
-
-def fetch_price(pair_address):
-    try:
-        url = f"https://api.dexscreener.com/latest/dex/pairs/solana/{pair_address}"
-        response = requests.get(url, headers=HEADERS, timeout=5)
-        response.raise_for_status()
-
-        data = response.json()
-        pairs = data.get("pairs", [])
-
-        if not pairs:
-            return None
-
-        return float(pairs[0]["priceUsd"])
-    except Exception as e:
-        print("Price fetch error:", e)
-        return None
 
 
 def extract_token(pair):
     try:
         return {
-            "address": pair.get("pairAddress"),
-            "symbol": pair["baseToken"]["symbol"],
-            "name": pair["baseToken"]["name"],
-            "price": float(pair["priceUsd"]),
-            "volume": float(pair["volume"]["h24"]),
-            "liquidity": float(pair["liquidity"]["usd"]),
+            "address": pair.get("pairAddress") or pair.get("address"),
+            "symbol": pair.get("baseToken", {}).get("symbol") or pair.get("symbol"),
+            "name": pair.get("baseToken", {}).get("name") or pair.get("name"),
+            "price": float(pair.get("priceUsd", pair.get("price", 0))),
+            "volume": float(pair.get("volume", {}).get("h24", pair.get("volume", 0))),
+            "liquidity": float(pair.get("liquidity", {}).get("usd", 0)),
         }
     except Exception as e:
         print("Extract error:", e)
@@ -57,9 +57,12 @@ def extract_token(pair):
 
 
 def get_valid_tokens():
-    pairs = fetch_pairs()
-    tokens = []
+    pairs = fetch_dexscreener_pairs()
+    pairs.extend(fetch_birdeye_tokens())
 
+    print(f"TOTAL PAIRS BEFORE FILTER: {len(pairs)}")
+
+    tokens = []
     conn = connect_db()
     cursor = conn.cursor()
 
@@ -71,19 +74,13 @@ def get_valid_tokens():
         if not token:
             continue
 
-        # Avoid duplicates
-        cursor.execute(
-            "SELECT 1 FROM tokens WHERE address=?",
-            (token["address"],)
-        )
-
+        cursor.execute("SELECT 1 FROM tokens WHERE address=?", (token["address"],))
         if cursor.fetchone():
             continue
 
         print(f"VALID TOKEN: {token['symbol']} | LQ={token['liquidity']}")
-
         tokens.append(token)
 
     conn.close()
-    print(f"TOTAL VALID TOKENS: {len(tokens)}")
+    print(f"TOTAL VALID TOKENS AFTER FILTER: {len(tokens)}")
     return tokens
