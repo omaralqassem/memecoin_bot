@@ -1,0 +1,6 @@
+solana
+solders
+websockets
+httpx
+python-dotenv
+pandas
