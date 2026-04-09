@@ -1,120 +1,53 @@
-# dashboard.py
 import streamlit as st
 import pandas as pd
 import sqlite3
-import plotly.express as px
-from datetime import datetime
+import time
 
-try:
-    from prophet import Prophet
-    PROPHET_AVAILABLE = True
-except ImportError:
-    PROPHET_AVAILABLE = False
+# Set page to wide mode for a professional "Terminal" look
+st.set_page_config(page_title="Alpha Sniper Dashboard", layout="wide")
 
-from config import DB_NAME, INTERVAL
-from collector import get_valid_tokens
-from db import create_table, insert_token
-from signals import generate_signal
-from telegram_bot import send_signal
-from streamlit_autorefresh import st_autorefresh
+def get_data():
+    conn = sqlite3.connect("bot_data.db")
+    # Fetch the latest 20 tokens that passed the rug filter
+    query = """
+    SELECT mint, symbol, rug_score, tx_count_1m, created_at 
+    FROM tokens 
+    WHERE is_safe = 1 
+    ORDER BY created_at DESC 
+    LIMIT 20
+    """
+    df = pd.read_sql(query, conn)
+    conn.close()
+    return df
 
-AI_PREDICT_PERIODS = 10
-AI_PREDICT_FREQ = "min"
-create_table()
-st_autorefresh(interval=INTERVAL * 1000, key="collector_refresh")
+st.title("🚀 Solana Alpha Sniper")
+st.subheader("Live Secure Token Feed")
 
-st.set_page_config(page_title="Memecoin AI Dashboard", layout="wide")
-st.title("🚀 Memecoin AI Dashboard + Telegram Bot")
+# Create a placeholder so we can refresh the table without reloading the whole page
+placeholder = st.empty()
 
-create_table()
+while True:
+    with placeholder.container():
+        data = get_data()
+        
+        if not data.empty:
+            # Formatting the display
+            data['created_at'] = pd.to_datetime(data['created_at'], unit='s')
+            
+            # Display Metrics
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Active Signals", len(data))
+            col2.metric("Avg Rug Score", round(data['rug_score'].mean(), 2))
+            col3.metric("Last Update", time.strftime("%H:%M:%S"))
 
-if 'last_run' not in st.session_state:
-    st.session_state.last_run = None
-if 'seen_tokens' not in st.session_state:
-    st.session_state.seen_tokens = set()
+            # The Main Table
+            st.dataframe(data, use_container_width=True)
+            
+            # Add a button for "Manual Buy" (We'll link this in Phase 4)
+            selected_mint = st.selectbox("Select Mint to Snipe", data['mint'].tolist())
+            if st.button(f"🚀 Snipe {selected_mint[:6]}..."):
+                st.warning("Phase 4 Execution Engine required for live trades!")
+        else:
+            st.info("Waiting for the engine to find safe tokens...")
 
-
-def run_pipeline():
-    tokens = get_valid_tokens()
-    st.write(f"Fetched {len(tokens)} tokens")
-
-    if not tokens:
-        st.warning("⚠️ No tokens passed filters")
-        return
-
-    for token in tokens:
-        insert_token(token)
-        signal = generate_signal(token)
-        if signal and signal['symbol'] not in st.session_state.seen_tokens:
-            st.success(f"🚨 SIGNAL DETECTED: {signal['symbol']} | Price: {signal['price']}")
-            send_signal(signal)
-            st.session_state.seen_tokens.add(signal['symbol'])
-
-    st.session_state.last_run = datetime.utcnow()
-
-
-if st.session_state.last_run is None:
-    run_pipeline()
-
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("Run Collector Now"):
-        run_pipeline()
-with col2:
-    if st.button("TEST TELEGRAM"):
-        send_signal({
-            "symbol": "TEST",
-            "action": "BUY",
-            "price": 1,
-            "liquidity": 10000,
-            "stop_loss": 0.9,
-            "take_profit": 1.2
-        })
-        st.success("Test message sent!")
-
-st.write(f"Last collector run: {st.session_state.last_run}")
-
-conn = sqlite3.connect(DB_NAME)
-df = pd.read_sql_query("SELECT * FROM tokens ORDER BY timestamp DESC", conn)
-conn.close()
-
-if df.empty:
-    st.warning("No data yet. Run collector first.")
-    st.stop()
-
-df['timestamp'] = pd.to_datetime(df['timestamp'])
-
-st.subheader("📋 Latest Tokens")
-st.dataframe(df.tail(50))
-
-top_tokens = df['symbol'].value_counts().head(5).index.tolist()
-
-st.subheader("📈 Price Trend of Top Tokens")
-for token in top_tokens:
-    token_df = df[df['symbol'] == token]
-    fig = px.line(token_df, x='timestamp', y='price', title=f'{token} Price Trend')
-    st.plotly_chart(fig, use_container_width=True)
-
-st.subheader("📊 Volume Spike Alerts")
-df['prev_volume'] = df.groupby('symbol')['volume'].shift(1)
-df['volume_change'] = (df['volume'] - df['prev_volume']) / df['prev_volume']
-volume_spikes = df[df['volume_change'] > 0.5].tail(20)
-st.dataframe(volume_spikes[['symbol', 'price', 'liquidity', 'volume', 'volume_change', 'timestamp']])
-
-if PROPHET_AVAILABLE:
-    st.subheader("🤖 AI-Based Volume Prediction")
-    for token in top_tokens:
-        token_df = df[df['symbol'] == token][['timestamp', 'volume']].rename(columns={'timestamp': 'ds', 'volume': 'y'})
-        if len(token_df) < 5:
-            continue
-        try:
-            model = Prophet(daily_seasonality=False, weekly_seasonality=False, yearly_seasonality=False)
-            model.fit(token_df)
-            future = model.make_future_dataframe(periods=AI_PREDICT_PERIODS, freq=AI_PREDICT_FREQ)
-            forecast = model.predict(future)
-            fig = px.line(forecast, x='ds', y='yhat', title=f'{token} Volume Prediction')
-            st.plotly_chart(fig, use_container_width=True)
-        except Exception as e:
-            st.warning(f"Prediction failed for {token}: {e}")
-else:
-    st.info("Prophet not installed — AI prediction disabled.")
+    time.sleep(2) # Refresh every 2 seconds

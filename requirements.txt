@@ -1,9 +1,0 @@
-streamlit
-streamlit-autorefresh
-requests
-pandas
-plotly
-prophet
-scikit-learn
-altair==4.2.2
-vega_datasets
